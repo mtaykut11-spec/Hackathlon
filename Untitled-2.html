@@ -1,0 +1,287 @@
+# Proje: Cloop-benzeri Ayrıntılı Site (ASP.NET Core Razor Pages)
+
+Bu proje Visual Studio için hazır bir ASP.NET Core Razor Pages (.NET 7+) şablonudur. Amaç: https://cloop.sg/ tarzı bir site oluşturmak; fakat içerik ve özellikler daha detaylıdır.
+
+---
+
+## Dosya yapısı
+
+```
+CloopDetailed/
+├─ CloopDetailed.csproj
+├─ Program.cs
+├─ appsettings.json
+├─ Models/
+│  └─ ContactModel.cs
+├─ Pages/
+│  ├─ _ViewImports.cshtml
+│  ├─ _ViewStart.cshtml
+│  ├─ Shared/_Layout.cshtml
+│  ├─ Index.cshtml
+│  ├─ Index.cshtml.cs
+│  ├─ Articles.cshtml
+│  ├─ Articles.cshtml.cs
+│  ├─ Article.cshtml
+│  ├─ Article.cshtml.cs
+│  ├─ Resources.cshtml
+│  ├─ Podcast.cshtml
+│  ├─ Contact.cshtml
+│  └─ Contact.cshtml.cs
+├─ wwwroot/
+│  ├─ css/site.css
+│  ├─ js/site.js
+│  └─ media/
+└─ Controllers/
+   └─ ApiController.cs
+```
+
+---
+
+## Program.cs
+```csharp
+using Microsoft.AspNetCore.Builder;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddRazorPages();
+builder.Services.AddControllers();
+
+var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/Error");
+    app.UseHsts();
+}
+
+app.UseHttpsRedirection();
+app.UseStaticFiles();
+app.UseRouting();
+
+app.MapControllers();
+app.MapRazorPages();
+
+app.Run();
+```
+
+---
+
+## Pages/Shared/_Layout.cshtml
+```html
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] - Cloop Detailed</title>
+    <link rel="stylesheet" href="/css/site.css" />
+</head>
+<body>
+    <header class="site-header">
+        <div class="container">
+            <a href="/">Cloop Detailed</a>
+            <nav>
+                <a asp-page="/Articles">Makaleler</a>
+                <a asp-page="/Podcast">Podcast</a>
+                <a asp-page="/Resources">Kaynaklar</a>
+                <a asp-page="/Contact">İletişim</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="container">
+        @RenderBody()
+    </main>
+
+    <footer class="site-footer">
+        <div class="container">© @DateTime.Now.Year Cloop Detailed</div>
+    </footer>
+
+    <script src="/js/site.js"></script>
+</body>
+</html>
+```
+
+---
+
+## Pages/Index.cshtml
+```html
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Ana Sayfa";
+}
+
+<section class="hero">
+    <h1>Derinlemesine İçerikler ve Kaynaklar</h1>
+    <p>Makale, video, podcast ve etkileşimli zihin haritalarıyla öğrenmeyi hızlandırın.</p>
+</section>
+
+<section class="featured">
+    <h2>Öne Çıkanlar</h2>
+    <div class="cards">
+        <article class="card"><h3>Girişimcilik 101</h3><p>Kısa özet...</p></article>
+        <article class="card"><h3>Design Thinking</h3><p>Kısa özet...</p></article>
+    </div>
+</section>
+
+<section class="newsletter">
+    <h2>Haber Bülteni</h2>
+    <form method="post" action="/api/newsletter/subscribe">
+        <input type="email" name="email" placeholder="E-posta adresiniz" required />
+        <button type="submit">Abone Ol</button>
+    </form>
+</section>
+```
+
+---
+
+## Pages/Articles.cshtml
+```html
+@page
+@model ArticlesModel
+@{
+    ViewData["Title"] = "Makaleler";
+}
+
+<h1>Makaleler</h1>
+<div class="filters">
+    <input id="search" placeholder="Ara..." />
+    <select id="tagFilter"><option value="">Tümü</option></select>
+</div>
+
+<div id="articleList">
+    <p>Makale listesi buraya yüklenecek.</p>
+</div>
+```
+
+---
+
+## Pages/Article.cshtml
+```html
+@page
+@model ArticleModel
+@{
+    ViewData["Title"] = Model?.Title ?? "Makale";
+}
+
+<article>
+    <h1>@Model.Title</h1>
+    <p class="meta">Yazar • @Model.PublishedDate.ToShortDateString()</p>
+    <div class="content">@Html.Raw(Model.ContentHtml)</div>
+</article>
+```
+
+---
+
+## Pages/Contact.cshtml
+```html
+@page
+@model ContactModelPage
+@{
+    ViewData["Title"] = "İletişim";
+}
+
+<h1>İletişim</h1>
+<form method="post" id="contactForm">
+    <input name="Name" placeholder="İsim" required />
+    <input name="Email" type="email" placeholder="E-posta" required />
+    <textarea name="Message" placeholder="Mesaj" required></textarea>
+    <button type="submit">Gönder</button>
+</form>
+
+<script>
+const form = document.getElementById('contactForm');
+form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const fd = new FormData(form);
+    const res = await fetch('/api/contact', {
+        method: 'POST',
+        body: JSON.stringify(Object.fromEntries(fd)),
+        headers: { 'Content-Type': 'application/json' }
+    });
+    if (res.ok) alert('Teşekkürler!'); else alert('Hata oldu');
+});
+</script>
+```
+
+---
+
+## Controllers/ApiController.cs
+```csharp
+using Microsoft.AspNetCore.Mvc;
+using CloopDetailed.Models;
+
+namespace CloopDetailed.Controllers
+{
+    [ApiController]
+    [Route("api")]
+    public class ApiController : ControllerBase
+    {
+        [HttpPost("contact")]
+        public IActionResult Contact([FromBody] ContactModel model)
+        {
+            if (!ModelState.IsValid)
+                return BadRequest(ModelState);
+
+            // Örn: veritabanına kaydet veya e-posta gönder
+            return Ok(new { status = "received" });
+        }
+
+        [HttpPost("newsletter/subscribe")]
+        public IActionResult Subscribe([FromForm] string email)
+        {
+            if (string.IsNullOrEmpty(email))
+                return BadRequest("Email gerekli.");
+
+            // Abonelik kaydı yapılabilir
+            return Ok(new { status = "subscribed" });
+        }
+    }
+}
+```
+
+---
+
+## Models/ContactModel.cs
+```csharp
+using System.ComponentModel.DataAnnotations;
+
+namespace CloopDetailed.Models
+{
+    public class ContactModel
+    {
+        [Required]
+        public string Name { get; set; }
+
+        [Required, EmailAddress]
+        public string Email { get; set; }
+
+        [Required]
+        public string Message { get; set; }
+    }
+}
+```
+
+---
+
+## wwwroot/css/site.css
+```css
+body { font-family: Arial, sans-serif; margin:0; padding:0; color:#222 }
+.container { max-width:1100px; margin:0 auto; padding:20px }
+.site-header { background:#0b4e6f; color:white; padding:12px 0 }
+.site-header a { color:white; margin-right:18px; text-decoration:none }
+.hero { padding:40px 0 }
+.cards { display:flex; gap:16px }
+.card { border:1px solid #ddd; padding:12px; border-radius:8px }
+.site-footer { background:#f4f4f4; padding:12px; margin-top:40px }
+```
+
+---
+
+## wwwroot/js/site.js
+```javascript
+console.log('Cloop Detailed site JS yüklendi');
+```
